@@ -24,22 +24,54 @@ function renderChart(result) {
           label: "Actual",
           data: actual,
           borderColor: "#0f766e",
-          backgroundColor: "transparent",
+          backgroundColor: "rgba(15, 118, 110, 0.08)",
+          borderWidth: 3,
+          pointRadius: 3,
           tension: 0.25,
         },
         {
           label: "Predicted",
           data: predicted,
-          borderColor: "#dc2626",
-          backgroundColor: "transparent",
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37, 99, 235, 0.08)",
+          borderWidth: 3,
+          pointRadius: 3,
           tension: 0.25,
         },
       ],
     },
     options: {
       responsive: true,
-      plugins: { legend: { position: "bottom" } },
-      scales: { y: { beginAtZero: false } },
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            boxWidth: 12,
+            boxHeight: 12,
+            usePointStyle: true,
+          },
+        },
+        tooltip: {
+          padding: 12,
+          displayColors: true,
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#64748b" },
+        },
+        y: {
+          beginAtZero: false,
+          grid: { color: "#e8eef5" },
+          ticks: { color: "#64748b" },
+        },
+      },
     },
   });
 }
@@ -81,8 +113,9 @@ runBtn.addEventListener("click", async () => {
   formData.append("lookback", document.querySelector("#lookback").value);
   formData.append("test_ratio", document.querySelector("#testRatio").value);
 
-  setStatus("Training models...");
+  setStatus("Training models and preparing dashboard...");
   runBtn.disabled = true;
+  runBtn.textContent = "Training...";
 
   try {
     const response = await fetch(`${apiUrl}/predict`, {
@@ -98,10 +131,11 @@ runBtn.addEventListener("click", async () => {
     document.querySelector("#maxError").textContent = format(result.max_error);
     renderChart(result);
     renderTables(result);
-    setStatus("Done. Graph prediction line is capped to the 1.5 target.", "ok");
+    setStatus("Prediction complete. The dashboard is updated with the latest validation results.", "ok");
   } catch (error) {
     setStatus(error.message, "error");
   } finally {
     runBtn.disabled = false;
+    runBtn.textContent = "Run Prediction";
   }
 });
