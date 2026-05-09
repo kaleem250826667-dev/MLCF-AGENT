@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.log
+
+# Local/accidental Python runtime files should not be committed for deployment.
+python.exe
+pythonw.exe
+python3.dll
+python311.dll
+vcruntime140.dll
+vcruntime140_1.dll

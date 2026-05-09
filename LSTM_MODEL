@@ -1,0 +1,125 @@
+# ==============================
+# REQUIRED LIBRARIES
+# ==============================
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_squared_error
+from sklearn.ensemble import GradientBoostingRegressor
+import warnings
+warnings.filterwarnings('ignore')
+
+# ==============================
+# 1. LOAD DATA
+# ==============================
+file_path = input("Enter your CSV file path: ")
+df = pd.read_csv(file_path)
+
+# Check required columns
+if 'Date' not in df.columns or 'Close' not in df.columns:
+    raise ValueError("CSV must contain 'Date' and 'Close' columns")
+
+# Convert Date
+df['Date'] = pd.to_datetime(df['Date'])
+df = df.sort_values('Date')
+
+# ==============================
+# 2. FILTER LAST 5 YEARS
+# ==============================
+last_date = df['Date'].max()
+five_years_ago = last_date - pd.DateOffset(years=5)
+df = df[df['Date'] >= five_years_ago]
+
+print("\nLast 5 Years Data Loaded Successfully!")
+
+# ==============================
+# 3. SELECT CLOSE PRICE
+# ==============================
+data = df[['Close']].values
+
+# ==============================
+# 4. SCALE DATA
+# ==============================
+scaler = MinMaxScaler(feature_range=(0,1))
+scaled_data = scaler.fit_transform(data)
+
+# ==============================
+# 5. CREATE DATASET (LOOKBACK)
+# ==============================
+X, y = [], []
+lookback = 60
+
+for i in range(lookback, len(scaled_data)):
+    X.append(scaled_data[i-lookback:i, 0])
+    y.append(scaled_data[i, 0])
+
+X, y = np.array(X), np.array(y)
+
+# ==============================
+# 6. TRAIN TEST SPLIT
+# ==============================
+split = int(len(X) * 0.8)
+X_train, X_test = X[:split], X[split:]
+y_train, y_test = y[:split], y[split:]
+
+# ==============================
+# 7. BUILD GRADIENT BOOSTING MODEL
+# ==============================
+model = GradientBoostingRegressor(
+    n_estimators=200,
+    learning_rate=0.05,
+    max_depth=5,
+    min_samples_split=5,
+    min_samples_leaf=2,
+    subsample=0.8,
+    random_state=42
+)
+
+# ==============================
+# 8. TRAIN MODEL
+# ==============================
+print("\nTraining Gradient Boosting Model...")
+model.fit(X_train, y_train)
+
+# ==============================
+# 9. PREDICTION
+# ==============================
+predictions = model.predict(X_test)
+predictions = scaler.inverse_transform(predictions)
+
+actual = scaler.inverse_transform(y_test.reshape(-1,1))
+
+# ==============================
+# 10. EVALUATION (RMSE & MSE)
+# ==============================
+mse = mean_squared_error(actual, predictions)
+rmse = np.sqrt(mse)
+
+print("\nModel Evaluation:")
+print("MSE:", mse)
+print("RMSE:", rmse)
+
+# ==============================
+# 11. GRAPH
+# ==============================
+plt.figure(figsize=(12,6))
+plt.plot(actual, label='Actual Price')
+plt.plot(predictions, label='Predicted Price')
+plt.title(f"Stock Price Prediction (Gradient Boosting)\nRMSE: {rmse:.2f}, MSE: {mse:.2f}")
+plt.xlabel("Time")
+plt.ylabel("Price")
+plt.legend()
+plt.show()
+
+# ==============================
+# 12. FUTURE PREDICTION (NEXT DAY)
+# ==============================
+last_60_days = scaled_data[-60:]
+last_60_days = np.reshape(last_60_days, (1, -1))
+
+future_price = model.predict(last_60_days)
+future_price = scaler.inverse_transform(future_price.reshape(-1, 1))
+
+print("\nPredicted Next Day Price:", future_price[0][0])
